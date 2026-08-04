@@ -8,22 +8,30 @@ export async function POST(req: Request) {
     const chatId = process.env.TELEGRAM_CHAT_ID;
 
     if (!token || !chatId) {
+      console.log("ENV ERROR:", {
+        token: !!token,
+        chatId: !!chatId,
+      });
+
       return NextResponse.json(
         {
           success: false,
-          error: "Не найдены TELEGRAM_BOT_TOKEN или TELEGRAM_CHAT_ID",
+          error: "ENV variables not found",
         },
         { status: 500 }
       );
     }
 
-    const text = `🔔 Новая заявка с сайта M Furniture
+    const text = `
+🔔 Новая заявка с сайта M Furniture
 
 👤 Имя: ${name}
+
 📞 Телефон: ${phone}
 
 🪑 Что нужно изготовить:
-${message}`;
+${message}
+`;
 
     const response = await fetch(
       `https://api.telegram.org/bot${token}/sendMessage`,
@@ -39,28 +47,30 @@ ${message}`;
       }
     );
 
-    const result = await response.json();
+    const telegram = await response.json();
 
-    console.log("Ответ Telegram:", result);
+    console.log("Telegram response:", telegram);
 
-    if (!result.ok) {
+    if (!telegram.ok) {
       return NextResponse.json(
         {
           success: false,
-          error: result.description,
+          telegram,
         },
         { status: 500 }
       );
     }
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({
+      success: true,
+    });
   } catch (error) {
-    console.error("Ошибка:", error);
+    console.error("SERVER ERROR:", error);
 
     return NextResponse.json(
       {
         success: false,
-        error: "Ошибка сервера",
+        error: String(error),
       },
       { status: 500 }
     );
