@@ -1,23 +1,37 @@
 import { NextResponse } from "next/server";
 
 export async function POST(req: Request) {
-    console.log("=== ROUTE STARTED ===");
+  console.log("=== ROUTE STARTED ===");
+
   try {
     const { name, phone, message } = await req.json();
 
     const token = process.env.TELEGRAM_BOT_TOKEN;
     const chatId = process.env.TELEGRAM_CHAT_ID;
 
-    if (!token || !chatId) {
-      console.log("ENV ERROR:", {
-        token: !!token,
-        chatId: !!chatId,
-      });
+    console.log("=== TELEGRAM CONFIG ===");
+    console.log("TOKEN EXISTS:", !!token);
+    console.log("CHAT ID:", chatId);
+
+    if (!token) {
+      console.error("TELEGRAM_BOT_TOKEN is missing");
 
       return NextResponse.json(
         {
           success: false,
-          error: "ENV variables not found",
+          error: "TELEGRAM_BOT_TOKEN is missing",
+        },
+        { status: 500 }
+      );
+    }
+
+    if (!chatId) {
+      console.error("TELEGRAM_CHAT_ID is missing");
+
+      return NextResponse.json(
+        {
+          success: false,
+          error: "TELEGRAM_CHAT_ID is missing",
         },
         { status: 500 }
       );
@@ -32,35 +46,40 @@ export async function POST(req: Request) {
 
 🪑 Что нужно изготовить:
 ${message}
-`;
+`.trim();
 
-    const response = await fetch(
-      `https://api.telegram.org/bot${token}/sendMessage`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          chat_id: chatId,
-          text,
-        }),
-      }
-    );
+    console.log("=== SENDING TO TELEGRAM ===");
 
-    const telegram = await response.json();
+    const telegramUrl = `https://api.telegram.org/bot${token}/sendMessage`;
 
-    console.log("Telegram response:", telegram);
+    const response = await fetch(telegramUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        chat_id: chatId,
+        text,
+      }),
+    });
 
-    if (!telegram.ok) {
+    const telegramData = await response.json();
+
+    console.log("Telegram response:", telegramData);
+
+    if (!telegramData.ok) {
+      console.error("Telegram error:", telegramData.description);
+
       return NextResponse.json(
         {
           success: false,
-          telegram,
+          error: telegramData.description,
         },
         { status: 500 }
       );
     }
+
+    console.log("=== TELEGRAM MESSAGE SENT ===");
 
     return NextResponse.json({
       success: true,
@@ -71,9 +90,16 @@ ${message}
     return NextResponse.json(
       {
         success: false,
-        error: String(error),
+        error: "Server error",
       },
       { status: 500 }
     );
   }
+}
+
+export async function GET() {
+  return NextResponse.json({
+    success: true,
+    message: "Contact API is working",
+  });
 }
